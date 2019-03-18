@@ -200,6 +200,14 @@ unsigned long cardano_account_generate_addresses(cardano_account *account, int i
 /* Transactions */
 /****************/
 
+/* transaction error definitions */
+typedef enum _transaction_config_error
+{
+    TRANSACTION_SUCCESS = 0,
+    TRANSACTION_NO_INPUT = 1,
+    TRANSACTION_NO_OUTPUT = 2,
+} cardano_transaction_error_t;
+
 typedef struct cardano_transaction_builder cardano_transaction_builder;
 typedef struct cardano_transaction_finalized cardano_transaction_finalized;
 /*!
@@ -302,7 +310,7 @@ uint64_t cardano_transaction_builder_fee(cardano_transaction_builder *tb);
 /*!
 * \brief Get a transaction object
 */
-cardano_transaction *cardano_transaction_builder_finalize(cardano_transaction_builder *tb);
+cardano_transaction_error_t *cardano_transaction_builder_finalize(cardano_transaction_builder *tb, cardano_transaction **tx);
 
 /*!
 * \brief Take a transaction and create a working area for adding witnesses
