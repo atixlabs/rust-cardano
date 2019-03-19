@@ -206,6 +206,9 @@ typedef enum _transaction_config_error
     TRANSACTION_SUCCESS = 0,
     TRANSACTION_NO_INPUT = 1,
     TRANSACTION_NO_OUTPUT = 2,
+    TRANSACTION_SIGNATURE_MISMATCH = 3,
+    TRANSACTION_OVER_LIMIT = 4,
+    TRANSACTION_SIGNATURES_EXCEEDED = 5,
 } cardano_transaction_error_t;
 
 typedef struct cardano_transaction_builder cardano_transaction_builder;
@@ -310,12 +313,13 @@ uint64_t cardano_transaction_builder_fee(cardano_transaction_builder *tb);
 /*!
 * \brief Get a transaction object
 */
-cardano_transaction_error_t *cardano_transaction_builder_finalize(cardano_transaction_builder *tb, cardano_transaction **tx);
+cardano_transaction_error_t cardano_transaction_builder_finalize(cardano_transaction_builder *tb, cardano_transaction **tx);
 
 /*!
 * \brief Take a transaction and create a working area for adding witnesses
 */
 cardano_transaction_finalized * cardano_transaction_finalized_new(cardano_transaction *c_tx);
+<<<<<<< 735353ad3763769843a3d1ad0df16b0c5ec4391b
 
 /*!
 * Add a witness associated with the next input.
@@ -335,6 +339,10 @@ cardano_result cardano_transaction_finalized_add_witness(cardano_transaction_fin
 * \sa cardano_transaction_finalized_add_witness()
 */
 cardano_signed_transaction *cardano_transaction_finalized_output(cardano_transaction_finalized *tf);
+=======
+cardano_transaction_error_t cardano_transaction_finalized_add_witness(cardano_transaction_finalized *tf, uint8_t c_xprv[96], uint32_t protocol_magic, uint8_t c_txid[32]);
+cardano_transaction_error_t cardano_transaction_finalized_output(cardano_transaction_finalized *tf, cardano_signed_transaction **txaux);
+>>>>>>> error handling add witness finalized output
 
 #ifdef __cplusplus
 }
