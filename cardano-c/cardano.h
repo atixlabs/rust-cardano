@@ -206,9 +206,13 @@ typedef enum _transaction_config_error
     TRANSACTION_SUCCESS = 0,
     TRANSACTION_NO_INPUT = 1,
     TRANSACTION_NO_OUTPUT = 2,
+    //The number of signatures doesn't match the number of inputs
     TRANSACTION_SIGNATURE_MISMATCH = 3,
+    //The transaction is too big
     TRANSACTION_OVER_LIMIT = 4,
+    //The number of signatures is greater than the number of inputs
     TRANSACTION_SIGNATURES_EXCEEDED = 5,
+    //The given value is greater than the maximum allowed coin value
     TRANSACTION_COIN_OUT_OF_BOUNDS = 6,
 } cardano_transaction_error_t;
 
