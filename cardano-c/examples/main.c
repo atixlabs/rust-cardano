@@ -62,6 +62,16 @@ void print_outputs(cardano_signed_transaction *tx)
 
 void print_transaction(cardano_signed_transaction *transaction)
 {
+    cardano_txid_t txid;
+    cardano_signed_transaction_txid(transaction, &txid);
+    
+    printf("%4cTxid:", ' ');
+    for (unsigned int j = 0; j < sizeof(txid); ++j)
+    {
+        printf("%02x", txid.bytes[j]);
+    }
+    printf("\n");
+
     print_inputs(transaction);
     print_outputs(transaction);
 }
