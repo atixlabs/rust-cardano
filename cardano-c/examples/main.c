@@ -156,7 +156,69 @@ memory_buffer_t get_block(char *blockid) {
     }
 }
 
+memory_buffer_t get_tip() {
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        char *url = "http://localhost:8080/mainnet/tip";
+
+        printf("%s\n", url);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/7.42.0");
+        
+        memory_buffer_t buffer;
+        buffer.size = 0;
+        buffer.bytes = NULL;
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+        
+        CURLcode res = curl_easy_perform(curl);
+        /* check for errors */ 
+        if(res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                    curl_easy_strerror(res));
+            exit(1);
+        }
+
+        curl_easy_cleanup(curl);
+        curl = NULL;
+
+        return buffer;
+    }
+}
+
+void print_tip(cardano_block_header *header) {
+    char *hash = cardano_block_header_compute_hash(header);
+    printf("hash: %s\n", hash);
+    cardano_block_delete_hash(hash);
+
+    char *previous_hash = cardano_block_header_previous_hash(header);
+    printf("Previous hash: %s\n", previous_hash);
+    cardano_block_delete_hash(previous_hash);
+
+    cardano_block_header_delete(header);
+}
+
 int main(int argc, char *argv[]) {
+
+    for(unsigned int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "-tip") == 0) {
+            memory_buffer_t tip = get_tip();
+
+            cardano_block_header *header;
+            cardano_result rch = cardano_raw_block_header_decode(
+                tip.bytes, tip.size, &header);
+            
+            if(rch != CARDANO_RESULT_SUCCESS) {
+                printf("Error decoding tip\n");
+                exit(1);
+            }
+
+            print_tip(header);
+            return 0;
+        }
+    }
+
     if (argc < 2) {
         printf("Expected block id as first parameter\n");
         exit(1);
