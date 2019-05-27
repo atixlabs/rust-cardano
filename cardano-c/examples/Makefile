@@ -8,4 +8,4 @@ signed_transaction: signed_transaction.c
 .PHONY: clean
 
 clean:
-	rm sign_transaction
+	rm signed_transaction

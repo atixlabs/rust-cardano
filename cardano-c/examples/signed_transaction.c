@@ -3,8 +3,24 @@
 #include <string.h>
 #include <stdio.h>
 
+/*
+Example of transaction generation an signing from the testnet
+Two addresses are generated from the given mnemonics, in this case:
+
+    - 2cWKMJemoBaiCnmPjDEhmPwDR9HhxtsLmzr4eHQNiQfBsRQ8sJnR94xGF5t8De5iBApqY
+    - 2cWKMJemoBajYE5NxbHPzhuYy9KCXxqbkeFPdN1h5koATAhm2HqruhNwMdBKKmgCscBWw
+
+The first one is used as the source address and is assumed that it has funds
+of '1194911488' lovelaces in the output 0 of the transaction with id:
+
+    "0090614e19a5fb74c41e4ac57e25ec0d41d44a55884eba14882ea8a403e59c24"
+
+The output is written to a file with the resulting transaction id as the name
+*/
+
 //Protocol magic for testnet
 static const uint32_t PROTOCOL_MAGIC = 1097911063;
+const uint32_t BIP44_SOFT_UPPER_BOUND = 0x80000000;
 
 int main(int argc, char *argv)
 {
@@ -55,50 +71,57 @@ int main(int argc, char *argv)
     /*Get a transaction builder*/
     cardano_transaction_builder *txbuilder = cardano_transaction_builder_new();
 
-    /*The transaction with the unspent*/
-    char *hex_unspent_txid = "db52e6de7506cb476e65463e34b748406037464ee53dffafbc953437f2edf161";
-
-    /*Parse the hex representation of txid*/
-    uint8_t unspent_txid[32];
-    for (size_t i = 0; i < sizeof unspent_txid; i++) {
-        sscanf(hex_unspent_txid + (i*2), "%2hhx", unspent_txid + i);
-    }
-
-    /*Derive the private key to sign the transaction*/
+    /*
+    Derive the private key to sign the transaction according to the 
+    bip44 derivation path
+    */
 
     //Derive the xprv of the account
-    const uint32_t BIP44_SOFT_UPPER_BOUND = 0x80000000;
+
     cardano_xprv *account_xprv = cardano_xprv_derive(
         root_key,
         BIP44_SOFT_UPPER_BOUND | 0
     );
 
-    //Derive the xprv of the first address
-    cardano_xprv *input_xprv = cardano_xprv_derive(account_xprv, 0);
+    //BIP44 derivation path. 
+    //0: External address
+    cardano_xprv *external_address_level = cardano_xprv_derive(account_xprv, 0);
 
+    //Derive the xprv of the first address
+    cardano_xprv *input_xprv = cardano_xprv_derive(external_address_level, 0);
+
+    //Byte representation is required for signing
     uint8_t *input_xprv_bytes = cardano_xprv_to_bytes(input_xprv);
 
-    for(int j = 0; j < 96; ++j) {
-        printf("%d,", input_xprv_bytes[j]);
+    //Add the input
+
+    /*The transaction with the unspent*/
+    char *hex_unspent_txid = "0090614e19a5fb74c41e4ac57e25ec0d41d44a55884eba14882ea8a403e59c24";
+
+    /*Parse the hex representation of txid*/
+    uint8_t unspent_txid[32];
+
+    for (size_t i = 0; i < sizeof unspent_txid; i++) {
+        sscanf(hex_unspent_txid + (i*2), "%2hhx", unspent_txid + i);
     }
-    printf("\n");
-    
-    /*Add the input*/
+
     cardano_txoptr *input = cardano_transaction_output_ptr_new(unspent_txid, 0);
 
-    if (cardano_transaction_builder_add_input(txbuilder, input, 10000) != CARDANO_RESULT_SUCCESS)
+    uint64_t input_funds = 1194911488;
+    if (cardano_transaction_builder_add_input(txbuilder, input, input_funds)
+     != CARDANO_RESULT_SUCCESS)
     {
         printf("Error adding input\n");
         return 1;
     }
 
-    /*Transfer to the second generated address*/
+    //Transfer to the second generated address
     cardano_address *to_address = cardano_address_import_base58(addresses[1]);
-    cardano_txoutput *output = cardano_transaction_output_new(to_address, 12000);
+    cardano_txoutput *output = cardano_transaction_output_new(to_address, 80000);
 
     cardano_transaction_builder_add_output(txbuilder, output);
 
-    /*Add the source address as change address*/
+    //Add the source address as change address
     cardano_address *change_addr = cardano_address_import_base58(addresses[0]);
     if (cardano_transaction_builder_add_change_addr(txbuilder, change_addr)
     != CARDANO_RESULT_SUCCESS) {
@@ -118,8 +141,8 @@ int main(int argc, char *argv)
 
     cardano_transaction_finalized *tf = cardano_transaction_finalized_new(tx);
 
-
-    if (cardano_transaction_finalized_add_witness(tf, input_xprv_bytes, PROTOCOL_MAGIC, txid.bytes) != CARDANO_RESULT_SUCCESS)
+    if (cardano_transaction_finalized_add_witness(tf, input_xprv_bytes, PROTOCOL_MAGIC, txid.bytes)
+        != CARDANO_RESULT_SUCCESS)
     {
         printf("Couldn't add witness\n");
         return 1;
@@ -141,7 +164,15 @@ int main(int argc, char *argv)
         return 1;
     }
 
-    FILE *file = fopen("signedTx.cbor", "w");
+    //Print the resulting txid in hexadecimal notation
+    char txid_str[sizeof(txid) * 2 + 1];
+    for (unsigned int j = 0; j < sizeof(txid); ++j)
+    {
+        sprintf(txid_str + (j*2), "%02x", txid.bytes[j]);
+    }
+
+    //Write the binary encoded transaction to file
+    FILE *file = fopen(txid_str, "w");
     fwrite(serialized_bytes, sizeof(uint8_t), serialized_size, file);
     fclose(file);
 }
